@@ -1,0 +1,88 @@
+version: "3.8"
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/app/Dockerfile
+    environment:
+      - RAILS_ENV=development
+      - MYSQL_HOST=db
+      - MYSQL_USER=root
+      - MYSQL_PASSWORD=
+    volumes:
+      - .:/app:cached
+      - idol_prince_rails_cache:/app/tmp/cache
+      - idol_prince_bundle:/bundle
+      # exclude volumes
+      - /_/bundle
+      - /_/docker
+      - /_/vendor
+      - /_/tmp
+      - /_/log
+      - /_/.git
+    command: /bin/sh -c "rm -f tmp/pids/server.pid && bin/rails s -p 3000 -b '0.0.0.0'"
+    ports:
+      - "3000:3000"
+    tmpfs:
+      - /tmp
+    networks:
+      - idol_prince_link
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    stdin_open: true
+    tty: true
+
+  db:
+    platform: linux/x86_64
+    image: mysql:5.7
+    volumes:
+      - ./docker/db/volume:/var/lib/mysql
+      - ./docker/db/conf.d:/etc/mysql/conf.d
+    command:
+      - --explicit-defaults-for-timestamp=true
+    environment:
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+      TZ: "Asia/Tokyo"
+    ports:
+      - "13306:3306"
+    healthcheck:
+      test: mysql -h db -P 3306 -u root -p -e 'SHOW DATABASES';
+      interval: 1s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    networks:
+      - idol_prince_link
+  redis:
+    image: "redis:alpine"
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: redis-cli ping
+      interval: 1s
+      timeout: 3s
+      retries: 30
+    networks:
+      - idol_prince_link
+
+#  TODO: 準備できるまでは保留
+#  app_doc:
+#    image: swaggerapi/swagger-ui:latest
+#    volumes:
+#      - ./app/controllers/api/spec.yml:/usr/share/nginx/html/spec.yml
+#    environment:
+#      API_URL: spec.yml
+#    ports:
+#      - "3001:8080"
+
+volumes:
+  idol_prince_rails_cache:
+  idol_prince_bundle:
+
+networks:
+  idol_prince_link:
+    external: true

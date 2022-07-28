@@ -1,0 +1,92 @@
+# production mock. for development see docker-compose-dev.yml
+
+version: '3.7'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gymsales_app
+    environment:
+      DATABASE_HOST: db
+      DATABASE_USERNAME: postgres
+      DATABASE_PASSWORD: postgres
+      DATABASE_NAME: gymsales
+      REDIS_URL: redis://redis:6379/
+    volumes:
+      - .:/webapp:cached
+      - gymsales_rails_cache:/webapp/tmp/cache
+      - gymsales_bundle:/bundle
+      # exclude volumes
+      - /_/bundle
+      - /_/docker
+      - /_/vendor
+      - /_/tmp
+      - /_/log
+      - /_/.git
+      - fitness-sync:/app:nocopy
+    command: /bin/sh -c "rm -f tmp/pids/server.pid && bin/rails s -p 3333 -b '0.0.0.0'"
+    ports:
+      - "3333:3333"
+    tmpfs:
+      - /tmp
+    networks:
+      - gymsales_link
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+        
+    stdin_open: true
+    tty: true
+  db:
+    image: postgres:9.6
+    restart: always
+    container_name: gymsales_app_db
+    volumes:
+      - $HOME/Volumes/docker/postgres:/var/lib/postgresql/data
+      - ./logs:/logs
+    user: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      PGPASSWORD: postgres
+      POSTGRES_DB: gymsales
+      PG_TRUST_LOCALNET: true
+      POSTGRES_HOST_AUTH_METHOD: md5
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - '15432:5432'
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready"]
+      interval: 1s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    networks:
+      - gymsales_link
+  redis:
+    image: redis:5.0-alpine
+    container_name: gymsales_app_redis
+    volumes:
+      - redis:/data
+    ports:
+      - "6379"
+    healthcheck:
+      test: redis-cli ping
+      interval: 1s
+      timeout: 3s
+      retries: 30
+    networks:
+    - gymsales_link
+volumes:
+  redis:
+  fitness-sync:
+    external: true
+  gymsales_rails_cache:
+  gymsales_bundle:
+networks:
+  gymsales_link:
+    external: true
