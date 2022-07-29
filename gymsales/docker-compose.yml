@@ -12,7 +12,7 @@ services:
       DATABASE_HOST: db
       DATABASE_USERNAME: postgres
       DATABASE_PASSWORD: postgres
-      DATABASE_NAME: gymsales
+      DATABASE_NAME: postgres
       REDIS_URL: redis://redis:6379/
     volumes:
       - .:/webapp:cached
@@ -48,12 +48,13 @@ services:
     volumes:
       - $HOME/Volumes/docker/postgres:/var/lib/postgresql/data
       - ./logs:/logs
+      - $HOME/docker/data:/home/data_container
     user: postgres
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       PGPASSWORD: postgres
-      POSTGRES_DB: gymsales
+      POSTGRES_DB: postgres
       PG_TRUST_LOCALNET: true
       POSTGRES_HOST_AUTH_METHOD: md5
       PGDATA: /var/lib/postgresql/data/pgdata
