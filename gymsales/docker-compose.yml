@@ -55,7 +55,6 @@ services:
       POSTGRES_PASSWORD: postgres
       PGPASSWORD: postgres
       POSTGRES_DB: postgres
-      PG_TRUST_LOCALNET: true
       POSTGRES_HOST_AUTH_METHOD: md5
       PGDATA: /var/lib/postgresql/data/pgdata
     ports:
