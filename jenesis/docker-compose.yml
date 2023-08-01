@@ -1,0 +1,82 @@
+version: "3.9"
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: jenesis_api
+    env_file:
+      - .env
+    environment:
+      - DB_HOST=db
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_DATABASE=${DB_DATABASE}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - NODE_ENV=production
+    volumes:
+      - .:/webapp:cached
+    command: /bin/sh -c "rm -f tmp/pids/server.pid && npm run typeorm migration:run -- -d ./src/database/migration.config.ts && yarn start"
+    ports:
+      - "3000:3000"
+    networks:
+      - jenesis_link
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # Define the Postgres service
+  db:
+    image: postgres:14.8
+    restart: always
+    container_name: jenesis_db
+    env_file:
+      - .env
+    environment:
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_DATABASE=${DB_DATABASE}
+    volumes:
+      - db_store:/var/lib/postgresql/data
+      - ./logs:/logs
+      - $HOME/docker/data:/home/data_container
+    ports:
+      - '15432:5432'
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready"]
+      interval: 1s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    networks:
+      - jenesis_link
+
+  # Define the Redis service
+  redis:
+    image: redis:5.0-alpine
+    container_name: jenesis_redis
+    volumes:
+      - redis:/data
+    ports:
+      - "63799:6379"
+    healthcheck:
+      test: redis-cli ping
+      interval: 1s
+      timeout: 3s
+      retries: 30
+    networks:
+      - jenesis_link
+volumes:
+  postgres:
+  redis:
+  db_store:
+
+# docker network create jenesis_link
+networks:
+  jenesis_link:
+    external: true
