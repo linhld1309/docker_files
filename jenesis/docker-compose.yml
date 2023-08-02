@@ -9,14 +9,15 @@ services:
       - .env
     environment:
       - DB_HOST=db
+      - DB_PORT=${DB_PORT}
       - DB_USERNAME=${DB_USERNAME}
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_DATABASE=${DB_DATABASE}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      - NODE_ENV=production
     volumes:
-      - .:/webapp:cached
+      - .:/app
+      - /app/node_modules
     command: /bin/sh -c "rm -f tmp/pids/server.pid && npm run typeorm migration:run -- -d ./src/database/migration.config.ts && yarn start"
     ports:
       - "3000:3000"
@@ -35,17 +36,16 @@ services:
     container_name: jenesis_db
     env_file:
       - .env
-    user: postgres
     environment:
+      - POSTGRES_HOST=${DB_HOST}
+      - POSTGRES_PORT=${DB_PORT}
       - POSTGRES_USER=${DB_USERNAME}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
       - POSTGRES_DB=${DB_DATABASE}
       - POSTGRES_HOST_AUTH_METHOD=md5
       - PGDATA=/var/lib/postgresql/data/pgdata
     volumes:
-      - db_store:/var/lib/postgresql/data
-      - ./logs:/logs
-      - $HOME/docker/data:/home/data_container
+      - postgres_data:/var/lib/postgresql/data
     ports:
       - '15432:5432'
     healthcheck:
@@ -75,7 +75,7 @@ services:
 volumes:
   postgres:
   redis:
-  db_store:
+  postgres_data:
 
 # docker network create jenesis_link
 networks:
